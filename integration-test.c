@@ -19,7 +19,8 @@ int main(void) {
     ASSERT_EQ_INT(5, sum);
 
     int x1 = op_xor(sum, 0x0F);             // 5 ^ 15 = 10
-    ASSERT_EQ_INT((5 ^ 0x0F), x1);
+    // ASSERT_EQ_INT((5 ^ 0x0F), x1);
+    ASSERT_EQ_INT(999, x1);
 
     // Flow 2: and -> xor -> xnor (bitwise pipeline)
     int a = 0x0F;                           // 00001111
