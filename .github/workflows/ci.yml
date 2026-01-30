@@ -7,45 +7,44 @@ on:
     branches: [ master ]
 
 jobs:
-  build:
+  build-test-coverage:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-    - name: Install dependencies
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y gcc lcov libncurses5-dev
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gcc cmake lcov libncurses5-dev
 
-    - name: Build project
-      run: |
-        make
+      - name: Configure (CMake)
+        run: |
+          cmake -S . -B build -DENABLE_COVERAGE=ON
 
-    - name: Run tests
-      run: |
-        ./test-library.out
+      - name: Build
+        run: |
+          cmake --build build
 
-    - name: Generate coverage report
-      run: |
-        gcov lib.c
-        
-    - name: Capture coverage info
-      run: |
-        lcov --directory . --capture --output-file coverage.info --ignore-errors unused,unsupported
+      - name: Run unit + integration tests (CTest)
+        run: |
+          ctest --test-dir build --output-on-failure
 
-    - name: Filter out system and test code
-      run: |
-        lcov --remove coverage.info 'tests/*' '/usr/*' 'test-library*' --output-file coverage.info --ignore-errors unused,unsupported
+      - name: Generate coverage (HTML + coverage.info)
+        run: |
+          cmake --build build --target coverage
+          test -f build/coverage.info
+          test -f build/coverage/index.html
 
-    - name: List coverage info
-      run: |
-        lcov --list coverage.info --ignore-errors unused,unsupported
+      - name: Upload HTML coverage report artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-html
+          path: build/coverage
 
-    - name: Upload coverage to Coveralls
-      uses: coverallsapp/github-action@v2
-      with:
-        github-token: ${{ secrets.GITHUB_TOKEN }}
-        file: ./coverage.info
-
+      - name: Upload coverage to Coveralls
+        uses: coverallsapp/github-action@v2
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          file: build/coverage.info
