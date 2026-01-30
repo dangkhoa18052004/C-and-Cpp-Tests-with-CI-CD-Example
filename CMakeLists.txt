@@ -76,34 +76,34 @@ add_test(NAME IntegrationTests COMMAND $<TARGET_FILE:integration-test>)
 
 # Coverage target (mainly for Linux CI)
 if(ENABLE_COVERAGE)
-    find_program(GCOV_EXECUTABLE gcov)
     find_program(LCOV_EXECUTABLE lcov)
     find_program(GENHTML_EXECUTABLE genhtml)
 
-    if(GCOV_EXECUTABLE)
+    if(LCOV_EXECUTABLE AND GENHTML_EXECUTABLE)
         add_custom_target(coverage
             COMMAND ${CMAKE_COMMAND} -E remove_directory coverage
             COMMAND ${CMAKE_COMMAND} -E make_directory coverage
+
+            # Run tests to generate .gcda
             COMMAND ${CMAKE_CTEST_COMMAND} --output-on-failure
-            COMMAND ${GCOV_EXECUTABLE} -b -c lib.c
-            COMMAND ${CMAKE_COMMAND} -E echo "Coverage report generated in *.gcov files"
+
+            # Capture coverage from the whole build tree
+            COMMAND ${LCOV_EXECUTABLE} --capture --directory . --output-file coverage.info --ignore-errors unused,unsupported
+
+            # Remove test files + system files
+            COMMAND ${LCOV_EXECUTABLE} --remove coverage.info
+                    '*/test-library.c' '*/integration-test.c' '/usr/*'
+                    --output-file coverage.info --ignore-errors unused,unsupported
+
+            # Generate HTML
+            COMMAND ${GENHTML_EXECUTABLE} coverage.info --output-directory coverage --ignore-errors unused,unsupported
+
             WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
             DEPENDS test-library integration-test
             COMMENT "Generating code coverage report..."
         )
-
-        if(LCOV_EXECUTABLE AND GENHTML_EXECUTABLE)
-            add_custom_command(TARGET coverage POST_BUILD
-                COMMAND ${LCOV_EXECUTABLE} --capture --directory . --output-file coverage.info --ignore-errors unused,unsupported
-                COMMAND ${LCOV_EXECUTABLE} --remove coverage.info '*/test-library.c' '*/integration-test.c'
-                        --output-file coverage.info --ignore-errors unused,unsupported
-                COMMAND ${GENHTML_EXECUTABLE} coverage.info --output-directory coverage --ignore-errors unused,unsupported
-                COMMAND ${CMAKE_COMMAND} -E echo "HTML coverage report generated in coverage/index.html"
-                WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
-            )
-        endif()
     else()
-        message(STATUS "gcov not found - coverage target will not be available")
+        message(STATUS "lcov/genhtml not found - coverage target will not be available")
     endif()
 endif()
 
