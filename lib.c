@@ -77,7 +77,7 @@ int  op_sub 	(int x, int y) {
 
 /* integer mul 			 */
 int  op_mul 	(int x, int y) {
-	return x*y;
+	return x*y
 }
 
 
