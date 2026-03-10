@@ -1,0 +1,191 @@
+x64 Native Tools Command Prompt for VS 2022
+cd /d D:\t3\C-and-Cpp-Tests-with-CI-CD-Example
+
+rmdir /s /q build 2>nul
+cmake -S . -B build -G "NMake Makefiles" -DENABLE_COVERAGE=OFF
+cmake --build build
+ctest --test-dir build --output-on-failure
+
+FILE coverage
+
+TC01 — Build bằng Makefile tạo đủ 2 executable
+
+Gõ ở terminal tại thư mục project:
+MSYS2 UCRT64
+pwd
+cd /d/t3/C-and-Cpp-Tests-with-CI-CD-Example
+pwd
+ls
+make
+
+Xem thành công ở đâu?
+
+./test-library.out
+./integration-test.out
+
+Trong log make: không có error, không có make: ***
+
+Kiểm tra file sinh ra:
+
+ls -l test-library.out integration-test.out
+
+
+PASS nếu 2 file tồn tại. FAIL nếu thiếu 1 trong 2 hoặc make báo error.
+
+✅ TC02 — Chạy unit test (test-library.out)
+./test-library.out
+echo $?
+
+
+Xem PASS ở đâu?
+
+echo $? ra 0 → PASS
+
+khác 0 → FAIL
+(Thường chương trình còn in log test của nó.)
+
+✅ TC03 — Chạy integration test FAIL (assert sai)
+./integration-test.out
+echo $?
+
+
+Xem FAIL ở đâu?
+
+Terminal sẽ in rõ:
+INTEGRATION TEST FAILED at integration-test.c:<line>
+expected: 999
+actual: 10
+
+Exit code khác 0 → Failed
+
+✅ TC9 — make test chạy unit + integration
+make test
+
+
+Xem ở đâu?
+
+make sẽ chạy lần lượt:
+
+./test-library.out
+
+./integration-test.out
+
+Nếu integration đang sai (TC03) → make test sẽ dừng và báo lỗi.
+
+✅ TC10 — make clean xoá artifacts
+make clean
+
+
+Xem ở đâu?
+
+Sau đó kiểm tra các file đã bị xoá chưa:
+
+ls -l *.out 2>/dev/null
+ls -l coverage.info 2>/dev/null
+ls -l coverage 2>/dev/null
+
+
+PASS nếu không còn những file/thư mục đó.
+
+B. Nếu bạn chạy LOCAL bằng CMake/CTest (giống CI)
+✅ TC11 — CMake configure + build (ENABLE_COVERAGE=ON)
+rm -rf build
+cmake -S . -B build -DENABLE_COVERAGE=ON
+cmake --build build
+
+
+Xem PASS ở đâu?
+
+Hai lệnh đều kết thúc không error
+
+cmake --build build chạy tới 100%
+
+✅ TC12 — CTest chạy unit + integration
+ctest --test-dir build --output-on-failure
+
+
+Xem PASS/FAIL ở đâu?
+Trong output sẽ có:
+
+LibraryTests ... Passed/Failed
+
+IntegrationTests ... Passed/Failed
+
+PASS khi cả 2 đều Passed.
+FAIL khi có ***Failed và nó in log fail.
+
+✅ TC13 — Generate coverage target
+cmake --build build --target coverage
+
+
+Xem PASS ở đâu?
+Kiểm tra file có tạo ra không:
+
+ls -l build/coverage.info
+ls -l build/coverage/index.html
+
+
+Có đủ → PASS. Thiếu → FAIL.
+
+(Trong CI trước bạn bị lỗi lib.gcno cannot open... → coverage step fail dù test pass.)
+
+C. Xem trên GitHub Actions (CI)
+✅ TC14 — CI chạy theo push/PR vào master
+
+Xem ở đâu?
+
+Vào repo GitHub → tab Actions
+
+Chọn workflow run mới nhất
+
+Mở job build-test-coverage
+
+Nhìn từng step:
+
+Checkout
+
+Install dependencies
+
+Configure (CMake)
+
+Build
+
+Run unit + integration tests (CTest)
+
+Generate coverage
+
+Upload artifact
+
+Upload to Coveralls
+
+✅ Run xanh = PASS, đỏ = FAIL.
+
+D. TC15 — Tương thích C++ (extern "C")
+
+Cái này bạn phải chạy LOCAL vì CI hiện đang build bằng gcc (C), chưa có bước g++.
+
+Tạo file smoke.cpp rồi chạy:
+
+g++ smoke.cpp lib.c -o smoke_cpp
+./smoke_cpp
+
+
+Xem PASS ở đâu?
+
+Compile không lỗi (đặc biệt không lỗi “undefined reference … op_add…” do name mangling)
+
+Chạy ./smoke_cpp ra output bình thường và exit code 0
+
+E. Trường hợp bạn dùng Windows (CMD/PowerShell) thì xem kiểu gì?
+
+ls → dùng dir
+
+echo $? → dùng echo %ERRORLEVEL%
+
+File không phải .out mà thường là .exe
+
+Ví dụ:
+
+dir test-library.exe integration-test.exe
+test-library.exe
+echo %ERRORLEVEL%

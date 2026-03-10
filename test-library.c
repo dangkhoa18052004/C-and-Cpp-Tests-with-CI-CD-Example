@@ -88,6 +88,7 @@ int test_xnor() {
 /*   test cases for op_add() function  */
 int test_add() {
 	if (op_add(3,4) != (3+4)) 
+	// if (op_add(3,4) != 999)
 		return E_FAIL;
 	return S_OK;
 }
